@@ -4,3 +4,4 @@ void clear_screen();
 void return_home();
 void print_string(char *buf, char size);
 void lcd_init();
+void set_cursor(char isOn, char isBlinking);

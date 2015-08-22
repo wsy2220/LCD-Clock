@@ -37,9 +37,15 @@ static char read_adb()
 	return adb;
 }
 
+static char isBusy()
+{
+	return read_adb() & 0x80;
+}
 
 static void write_IR(char I)
 {
+	while(isBusy())
+		;
 	W_ENABLE;
 	PORT_CTL &= ~(_BV(LCD_RS) | _BV(LCD_RW));
 	PORT_DATA = I;
@@ -51,6 +57,8 @@ static void write_IR(char I)
 
 static void write_DR(char D)
 {
+	while(isBusy())
+		;
 	W_ENABLE;
 	PORT_CTL &= ~_BV(LCD_RW);
 	PORT_CTL |=  _BV(LCD_RS);
@@ -68,15 +76,26 @@ void lcd_init()
 	PORT_CTL |= _BV(LCD_VCC);
 	_delay_ms(20);
 	write_IR(0x38);
-	_delay_us(40);
-	write_IR(0x0E);
-	_delay_us(40);
+	write_IR(0x0C);
 }
 
 void print_char(char c)
 {
 	write_DR(c);
-	_delay_us(40);
+}
+
+void set_cursor(char isOn, char isBlinking)
+{
+	char cmd = 0x0C;
+	if(isOn)
+		cmd |= 0x02;
+	else
+		cmd &= ~0x02;
+	if(isBlinking)
+		cmd |= 0x01;
+	else
+		cmd &= ~0x01;
+	write_IR(cmd);
 }
 
 /* line: 0-1, column: 0-40 */
@@ -84,19 +103,16 @@ void set_position(char line, char column)
 {
 	char addr = (line << 6) + column + 0x80;
 	write_IR(addr);
-	_delay_us(40);
 }
 
 void clear_screen()
 {
 	write_IR(0x01);
-	_delay_ms(2);
 }
 
 void return_home()
 {
 	write_IR(0x02);
-	_delay_ms(2);
 }
 
 void print_string(char *buf, char size)

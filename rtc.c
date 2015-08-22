@@ -5,6 +5,7 @@
 #define CE  PG2
 #define PORT_RTC PORTG
 #define DDR_RTC  DDRG
+#define PIN_RTC  PING
 
 #define W_ENABLE DDR_RTC |=  _BV(IO)
 #define R_ENABLE DDR_RTC &= ~_BV(IO)
@@ -18,8 +19,8 @@
 #define T_DC  0.25
 #define T_CH  0.5
 #define T_CL  0.5
-#define T_CC  4
-#define T_CWH 4
+#define T_CC  2
+#define T_CWH 2
 
 
 void rtc_init()
@@ -55,10 +56,7 @@ static char rtc_read()
 	char b = 0;
 	int i;
 	for(i = 0; i < 8; i++){
-		//b |= ((PORT_RTC >> IO) & 0x01) << i;
-		if((PORT_RTC & _BV(IO)))
-			b |= 1;
-		b <<= 1;
+		b |= ((PIN_RTC >> IO) & 0x01) << i;
 		SCK_HIGH;
 		_delay_us(T_CH);
 		SCK_LOW;
@@ -73,7 +71,10 @@ static void rtc_write(char b)
 {
 	int i;
 	for(i = 0; i < 8; i++){
-		PORT_RTC |= ((b >> i) & 0x01) * _BV(IO);
+		if(((b >> i) & 0x01))
+			IO_HIGH;
+		else
+			IO_LOW;
 		_delay_us(T_DC);
 		SCK_HIGH;
 		_delay_us(T_CH);
@@ -84,11 +85,15 @@ static void rtc_write(char b)
 	_delay_us(T_CWH);
 }
 
-char rtc_read_sec()
+/* read a register using raw command, see datasheet */
+char rtc_read_reg(char cmd)
 {
-	char sec;
-	rtc_send(0x81);
-	sec = rtc_read();
-	return sec;
+	rtc_send(cmd);
+	return rtc_read();
 }
 
+void rtc_write_reg(char cmd, char b)
+{
+	rtc_send(cmd);
+	rtc_write(b);
+}
